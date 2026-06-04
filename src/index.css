@@ -1,3 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* react-querybuilder dark theme overrides */
+.rqb-theme {
+  --rqb-font-size: 12px;
+  --rqb-color: #cbd5e1;
+  --rqb-border-color: #334155;
+  --rqb-background-color: transparent;
+}
+
+.rqb-theme .ruleGroup {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.rqb-theme .ruleGroup .rule,
+.rqb-theme .ruleGroup .ruleGroup {
+  padding: 2px 0;
+}
+
+.rqb-theme .ruleGroup-addGroup,
+.rqb-theme .ruleGroup .rule-add {
+  font-size: 11px;
+}
+
+.rqb-theme .ruleGroup-header {
+  margin-bottom: 4px;
+  gap: 4px;
+}
+
+.rqb-theme select,
+.rqb-theme input {
+  font-size: 12px;
+}
+
+.rqb-theme .ruleGroup-body {
+  gap: 2px;
+}
+
+/* CodeMirror dark theme adjustments */
+.cm-editor .cm-gutters {
+  background: #0f172a;
+  border-right: 1px solid #1e293b;
+}
+
+.cm-editor .cm-activeLineGutter {
+  background: #1e293b;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
