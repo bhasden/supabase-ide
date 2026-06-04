@@ -8,8 +8,15 @@ import {
   ChevronRight,
   Search,
   X,
+  Loader2,
+  HardDrive,
 } from 'lucide-react';
 import type { DbConnection } from '../lib/types';
+
+type AddTableResult = {
+  ok: boolean;
+  message?: string;
+};
 
 interface SidebarProps {
   connections: DbConnection[];
@@ -17,10 +24,11 @@ interface SidebarProps {
   activeTable: string | null;
   onSelectConnection: (id: string) => void;
   onSelectTable: (tableName: string) => void;
-  onAddTable: (connId: string, tableName: string) => void;
+  onAddTable: (connId: string, tableName: string) => Promise<AddTableResult>;
   onRemoveTable: (connId: string, tableName: string) => void;
   onRemoveConnection: (connId: string) => void;
   onOpenAddConnection: () => void;
+  onOpenClearLocalData: () => void;
 }
 
 export default function Sidebar({
@@ -33,12 +41,16 @@ export default function Sidebar({
   onRemoveTable,
   onRemoveConnection,
   onOpenAddConnection,
+  onOpenClearLocalData,
 }: SidebarProps) {
   const [expandedConnections, setExpandedConnections] = useState<Set<string>>(
     () => new Set(connections.map((c) => c.id))
   );
   const [tableSearch, setTableSearch] = useState('');
+  const [tableSearchError, setTableSearchError] = useState<string | null>(null);
+  const [addingTableFor, setAddingTableFor] = useState<string | null>(null);
   const [hoveredTable, setHoveredTable] = useState<string | null>(null);
+  const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
 
   const toggleExpand = (connId: string) => {
     setExpandedConnections((prev) => {
@@ -49,12 +61,32 @@ export default function Sidebar({
     });
   };
 
-  const handleTableSearchSubmit = (e: React.FormEvent, connId: string) => {
+  const toggleTableExpand = (connId: string, tableName: string) => {
+    const key = `${connId}::${tableName}`;
+    setExpandedTables((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleTableSearchSubmit = async (e: React.FormEvent, connId: string) => {
     e.preventDefault();
     const trimmed = tableSearch.trim();
     if (!trimmed) return;
-    onAddTable(connId, trimmed);
+    setAddingTableFor(connId);
+    setTableSearchError(null);
+    const result = await onAddTable(connId, trimmed);
+    setAddingTableFor(null);
+
+    if (!result.ok) {
+      setTableSearchError(result.message ?? 'Table not found');
+      return;
+    }
+
     onSelectTable(trimmed);
+    setExpandedTables((prev) => new Set(prev).add(`${connId}::${trimmed}`));
     setTableSearch('');
   };
 
@@ -124,40 +156,75 @@ export default function Sidebar({
                 <div className="pb-1">
                   {conn.tables.map((table) => {
                     const isTableActive =
-                      isActive && activeTable === table;
-                    const isHovered = hoveredTable === `${conn.id}::${table}`;
+                      isActive && activeTable === table.name;
+                    const tableKey = `${conn.id}::${table.name}`;
+                    const isHovered = hoveredTable === tableKey;
+                    const isTableExpanded = expandedTables.has(tableKey);
 
                     return (
-                      <div
-                        key={table}
-                        className="flex items-center group/table"
-                        onMouseEnter={() => setHoveredTable(`${conn.id}::${table}`)}
-                        onMouseLeave={() => setHoveredTable(null)}
-                      >
-                        <button
-                          onClick={() => {
-                            onSelectConnection(conn.id);
-                            onSelectTable(table);
-                          }}
-                          className={`flex-1 flex items-center gap-2 pl-8 pr-2 py-1.5 text-xs transition-colors ${
-                            isTableActive
-                              ? 'text-emerald-400 bg-emerald-500/10'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
+                      <div key={table.name}>
+                        <div
+                          className="flex items-center group/table"
+                          onMouseEnter={() => setHoveredTable(tableKey)}
+                          onMouseLeave={() => setHoveredTable(null)}
                         >
-                          <Table2 size={12} />
-                          <span className="truncate">{table}</span>
-                        </button>
-                        <button
-                          onClick={() => onRemoveTable(conn.id, table)}
-                          className={`px-2 py-1.5 transition-all ${
-                            isHovered
-                              ? 'opacity-100 text-slate-500 hover:text-amber-400'
-                              : 'opacity-0'
-                          }`}
-                        >
-                          <Minus size={12} />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleTableExpand(conn.id, table.name)}
+                            className="pl-6 pr-1 py-1.5 text-slate-600 hover:text-slate-400 transition-colors"
+                          >
+                            {isTableExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                          </button>
+                          <button
+                            onClick={() => {
+                              onSelectConnection(conn.id);
+                              onSelectTable(table.name);
+                            }}
+                            className={`flex-1 flex items-center gap-2 pr-2 py-1.5 text-xs transition-colors ${
+                              isTableActive
+                                ? 'text-emerald-400 bg-emerald-500/10'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <Table2 size={12} />
+                            <span className="truncate">{table.name}</span>
+                          </button>
+                          <button
+                            onClick={() => onRemoveTable(conn.id, table.name)}
+                            className={`px-2 py-1.5 transition-all ${
+                              isHovered
+                                ? 'opacity-100 text-slate-500 hover:text-amber-400'
+                                : 'opacity-0'
+                            }`}
+                          >
+                            <Minus size={12} />
+                          </button>
+                        </div>
+
+                        {isTableExpanded && (
+                          <div className="pl-12 pr-3 pb-1">
+                            <div className="text-[10px] uppercase tracking-wide text-slate-600 mb-1">
+                              {table.schema}
+                            </div>
+                            {table.columns.length > 0 ? (
+                              <div className="space-y-0.5">
+                                {table.columns.map((column) => (
+                                  <div
+                                    key={column.name}
+                                    className="flex items-center justify-between gap-2 text-[11px]"
+                                  >
+                                    <span className="truncate text-slate-400">{column.name}</span>
+                                    <span className="shrink-0 text-slate-600">{column.type}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-slate-600">
+                                Columns unavailable
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -170,20 +237,41 @@ export default function Sidebar({
                     <div className="relative">
                       <Search
                         size={11}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600"
+                        className={`absolute left-2 top-1/2 -translate-y-1/2 ${
+                          tableSearchError ? 'text-red-400' : 'text-slate-600'
+                        }`}
                       />
                       <input
                         type="text"
                         placeholder="Add table..."
                         value={tableSearch}
-                        onChange={(e) => setTableSearch(e.target.value)}
-                        className="w-full bg-slate-800/50 border border-slate-700/50 rounded px-6 py-1 text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                        onChange={(e) => {
+                          setTableSearch(e.target.value);
+                          setTableSearchError(null);
+                        }}
+                        disabled={addingTableFor === conn.id}
+                        className={`w-full bg-slate-800/50 border rounded px-6 py-1 text-[11px] placeholder-slate-600 focus:outline-none disabled:opacity-60 ${
+                          tableSearchError
+                            ? 'border-red-500/60 text-red-300 focus:ring-1 focus:ring-red-500/50'
+                            : 'border-slate-700/50 text-slate-300 focus:ring-1 focus:ring-emerald-500/50'
+                        }`}
                       />
+                      {addingTableFor === conn.id && (
+                        <Loader2
+                          size={10}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-emerald-400 animate-spin"
+                        />
+                      )}
                       {tableSearch && (
                         <button
                           type="button"
-                          onClick={() => setTableSearch('')}
-                          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400"
+                          onClick={() => {
+                            setTableSearch('');
+                            setTableSearchError(null);
+                          }}
+                          className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 ${
+                            addingTableFor === conn.id ? 'hidden' : ''
+                          }`}
                         >
                           <X size={10} />
                         </button>
@@ -198,8 +286,18 @@ export default function Sidebar({
       </div>
 
       {/* Footer */}
-      <div className="p-2.5 border-t border-slate-800 text-[10px] text-slate-600">
-        {connections.length} connection{connections.length !== 1 ? 's' : ''}
+      <div className="p-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+        <span className="text-[10px] text-slate-600">
+          {connections.length} connection{connections.length !== 1 ? 's' : ''}
+        </span>
+        <button
+          type="button"
+          onClick={onOpenClearLocalData}
+          className="inline-flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] text-slate-500 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+        >
+          <HardDrive size={11} />
+          Clear
+        </button>
       </div>
     </aside>
   );

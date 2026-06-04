@@ -28,10 +28,7 @@ export default function ConnectionSetup({ onConnect }: ConnectionSetupProps) {
     setError(null);
 
     const client = createClient(url.trim(), apiKey.trim());
-    client
-      .from('_test_connection_probe')
-      .select('*')
-      .limit(1)
+    Promise.resolve(client.from('_test_connection_probe').select('*').limit(1))
       .then(() => {
         onConnect(name.trim() || deriveConnectionName(url), url.trim(), apiKey.trim());
       })

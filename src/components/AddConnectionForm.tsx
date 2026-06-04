@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Loader2, X, Plus } from 'lucide-react';
+import { Database, X, Plus } from 'lucide-react';
 import { deriveConnectionName } from '../lib/clients';
 
 interface AddConnectionFormProps {
