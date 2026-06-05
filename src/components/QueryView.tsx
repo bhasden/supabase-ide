@@ -32,6 +32,7 @@ import {
   applyQueryRules,
   areRuleValuesReadyForSubmit,
   buildRuleFilterParams,
+  buildRuleFilterSignature,
 } from '../lib/query-translator';
 import {
   formatValueForColumnInput,
@@ -477,6 +478,15 @@ export default function QueryView({
     connection.schemaDiscovery.graphql,
   ]);
 
+  const initialFilterFields = useMemo(() => toFilterFields(initialColumns), [initialColumns]);
+  const initialFieldTypes = useMemo(
+    () =>
+      Object.fromEntries(
+        initialFilterFields.map((field) => [field.name, String(field.datatype ?? 'text')])
+      ),
+    [initialFilterFields]
+  );
+
   const [columns, setColumns] = useState<ColumnInfo[]>(initialColumns);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
@@ -494,13 +504,16 @@ export default function QueryView({
   const [advancedQuery, setAdvancedQuery] = useState(() => createAdvancedQueryState());
   const [useRawQuery, setUseRawQuery] = useState(false);
   const [filterFields, setFilterFields] = useState<Field[]>(
-    () => toFilterFields(initialColumns)
+    () => initialFilterFields
   );
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [queryRevision, setQueryRevision] = useState(0);
   const [sortOrder, setSortOrder] = useState<ColumnSort>(initialViewState.sortOrder);
   const columnsRef = useRef<ColumnInfo[]>(initialColumns);
-  const fieldTypesRef = useRef<Record<string, string | undefined>>({});
+  const fieldTypesRef = useRef<Record<string, string | undefined>>(initialFieldTypes);
+  const submittedRulesSignatureRef = useRef(
+    buildRuleFilterSignature(stripRuleLocks(initialViewState.rules), initialFieldTypes)
+  );
 
   const fieldTypes = useMemo(
     () =>
@@ -655,6 +668,10 @@ export default function QueryView({
 
     const timeoutId = window.setTimeout(() => {
       if (!areRuleValuesReadyForSubmit(rules, fieldTypes)) return;
+      const nextSignature = buildRuleFilterSignature(rules, fieldTypes);
+      if (nextSignature === submittedRulesSignatureRef.current) return;
+
+      submittedRulesSignatureRef.current = nextSignature;
       setSubmittedRules(rules);
       setPage(0);
     }, VISUAL_QUERY_DEBOUNCE_MS);
@@ -689,6 +706,7 @@ export default function QueryView({
 
   const handleClearFilters = useCallback(() => {
     const emptyRules = createDefaultTableViewState().rules;
+    submittedRulesSignatureRef.current = buildRuleFilterSignature(emptyRules, fieldTypesRef.current);
     setRules(emptyRules);
     setSubmittedRules(emptyRules);
     setPage(0);

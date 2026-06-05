@@ -3,6 +3,7 @@ import type { RuleGroupType } from 'react-querybuilder';
 import {
   applyQueryRules,
   areRuleValuesReadyForSubmit,
+  buildRuleFilterSignature,
   buildRuleFilterParams,
 } from './query-translator';
 
@@ -200,6 +201,28 @@ describe('query translator', () => {
     applyQueryRules(createBaseQuery(builder) as never, rules, '*', 'exact', fieldTypes);
 
     expect(builder.calls).toEqual([['select', '*', { count: 'exact' }]]);
+  });
+
+  it('keeps in-progress value rules out of the executable filter signature', () => {
+    const emptyRules: RuleGroupType = {
+      combinator: 'and',
+      rules: [],
+    };
+    const inProgressRules: RuleGroupType = {
+      combinator: 'and',
+      rules: [{ field: 'name', operator: '=', value: '' }],
+    };
+    const completeRules: RuleGroupType = {
+      combinator: 'and',
+      rules: [{ field: 'name', operator: '=', value: 'Ada' }],
+    };
+
+    expect(buildRuleFilterSignature(inProgressRules)).toBe(
+      buildRuleFilterSignature(emptyRules)
+    );
+    expect(buildRuleFilterSignature(completeRules)).not.toBe(
+      buildRuleFilterSignature(emptyRules)
+    );
   });
 
   it('allows complete structured values through preview params and requests', () => {

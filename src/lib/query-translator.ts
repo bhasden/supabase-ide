@@ -281,6 +281,13 @@ export function buildRuleFilterParams(
   });
 }
 
+export function buildRuleFilterSignature(
+  rules: RuleGroupType,
+  fieldTypes: FieldDataTypes = {}
+): string {
+  return JSON.stringify(buildRuleFilterParams(rules, fieldTypes));
+}
+
 export function applyQueryRules(
   baseQuery: QueryableBuilder,
   rules: RuleGroupType,
