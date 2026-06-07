@@ -4,6 +4,24 @@
 
 Supabase IDE is a browser-based explorer for querying Supabase tables when you have a project URL and anon/public API key. It is designed for local, personal configuration: connections, table names, and active selections are saved in browser localStorage.
 
+## Screenshots
+
+### Connection Setup
+
+![Connection setup screen](docs/screenshots/connection-setup.png)
+
+### Table Browser
+
+![Table browser with saved tables, column metadata, and header filters](docs/screenshots/table-browser.png)
+
+### Visual Filters
+
+![Visual filter builder with synchronized header filters](docs/screenshots/visual-filters.png)
+
+### Advanced Query
+
+![Advanced query editor with explicit Run action and request URL preview](docs/screenshots/advanced-query.png)
+
 ## Features
 
 - Configure one or more Supabase projects.
@@ -70,4 +88,5 @@ This app is a client-side explorer. It does not store configuration on a server,
 
 - [Architecture](ARCHITECTURE.md)
 - [Documentation Timeline](docs/README.md)
+- [Screenshot Gallery](docs/screenshots/README.md)
 - [Current State Decision](docs/decisions/0001-2026-06-04-current-state.md)

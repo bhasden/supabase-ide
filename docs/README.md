@@ -11,6 +11,7 @@ This directory is the project decision timeline. It records architecture and des
 - Grammar, formatting, and clarity edits are allowed when they preserve the original content and ideas.
 - Do not rewrite an old decision to match a new direction. Add a new dated document that explains the changed decision instead.
 - Link important decision documents from `ARCHITECTURE.md` or `README.md` when they affect current behavior.
+- Keep UI screenshots in `docs/screenshots/` and link them from the root README when they show current user-facing behavior.
 
 ## Current Documents
 
